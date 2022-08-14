@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::prelude::Pubkey;
 use anchor_spl::{token::{Token, Mint, TokenAccount}};
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("EhVhhvQEhyRELEKSsivfSo1YFxKa4btgspR9WGjcP6Ei");
 
 #[program]
 pub mod hera_solana {
@@ -13,6 +13,7 @@ pub mod hera_solana {
         fund_data.fy_premium = fy_premium;
         fund_data.fy_allowable = fy_allowable;
         fund_data.year = year;
+        
         Ok(())
     }
 }
