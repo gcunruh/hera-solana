@@ -40,6 +40,7 @@ pub mod hera_solana {
         let enrollment = &mut ctx.accounts.enrollment;
         enrollment.paid_in = paid_in.into();
         enrollment.fund =  fund_data.key();
+        enrollment.subscriber = ctx.accounts.subscriber.key();
         enrollment.bump = *ctx.bumps.get("enrollment").unwrap();
 
         // transfer paid_in
@@ -60,7 +61,11 @@ pub mod hera_solana {
 
     pub fn make_claim(ctx: Context<MakeClaim>, idx: u64, claim_amount: u16) -> Result<()> {
         let enrollment = &ctx.accounts.enrollment;
-        if (enrollment.paid_in < 1) {
+        assert_eq!(
+            enrollment.subscriber.key(),
+            ctx.accounts.subscriber.key()
+        );
+        if enrollment.paid_in < 1 {
             return Err(error!(HeraError::NotEligible));
         }
         let claim = &mut ctx.accounts.claim;
@@ -82,12 +87,13 @@ pub struct FundData {
 #[account]
 pub struct Enrollment {
     fund: Pubkey,
+    subscriber: Pubkey,
     paid_in: u64,
     bump: u8
 }
 
 #[account]
-pub  struct Claim {
+pub struct Claim {
     status: String,
     claim_amount: u64,
     bump: u8
@@ -142,7 +148,7 @@ pub struct Enroll<'info> {
     #[account(
         init,
         payer = subscriber,
-        space = 8 + 32 + 64 + 1, 
+        space = 8 + 32 + 32 + 64 + 1, 
         seeds = [b"enrollment", subscriber.key().as_ref()], bump
     )]
     pub enrollment: Account<'info, Enrollment>,
@@ -166,7 +172,8 @@ pub struct MakeClaim<'info> {
         init,
         payer = subscriber,
         space = 8 + 32 + 64 + 100 + 1, 
-        seeds = [b"claim", subscriber.key().as_ref(), enrollment.key().as_ref(), idx.to_le_bytes().as_ref()], bump
+        seeds = [b"claim", subscriber.key().as_ref(), enrollment.key().as_ref(), idx.to_le_bytes().as_ref()], 
+        bump
     )]
     pub claim: Account<'info, Claim>,
     pub system_program: Program<'info, System>,

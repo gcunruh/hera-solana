@@ -18,6 +18,9 @@ describe("hera-solana", async () => {
   const idx = new anchor.BN(parseInt((Date.now() / 1000).toString()));
   const idxBuffer = idx.toBuffer('le', 8);
 
+  const claimIdx = new anchor.BN(parseInt((Date.now() / 1000).toString()));
+  const claimIdxBuffer = idx.toBuffer('le', 8);
+
   const fundDataSeeds = [
     Buffer.from("fund_data"),
     idxBuffer
@@ -160,6 +163,50 @@ describe("hera-solana", async () => {
 
     await provider.sendAndConfirm(tx3, [subscriber])
     console.log("Success!", tx3);
+  })
+
+  it("Make Claim", async() => {
+    const enrollmentSeeds = [
+      Buffer.from("enrollment"),
+      subscriber.publicKey.toBuffer()
+    ]
+
+    const [enrollmentPda, enrollmentBump] = await anchor.web3.PublicKey
+        .findProgramAddress(
+            enrollmentSeeds,
+            programId,
+    );
+
+    const claimSeeds = [
+      Buffer.from("claim"),
+      subscriber.publicKey.toBuffer(),
+      enrollmentPda.toBuffer(),
+      claimIdxBuffer
+    ]
+
+    const [claimPda, claimBump] = await anchor.web3.PublicKey
+      .findProgramAddress(
+          claimSeeds,
+          programId,
+    );
+
+    let tx4 = new anchor.web3.Transaction();
+
+    const args = {
+      claimIdx: claimIdx,
+      amount: 1
+    }
+
+    tx4.add(
+      await program.methods.makeClaim(args.claimIdx, args.amount).accounts({
+        subscriber: subscriber.publicKey,
+        enrollment: enrollmentPda,
+        claim: claimPda
+      }).instruction()
+    )
+
+    await provider.sendAndConfirm(tx4, [subscriber])
+    console.log("Success!", tx4);
   })
 
 });
