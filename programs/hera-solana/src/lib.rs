@@ -34,7 +34,7 @@ pub mod hera_solana {
         Ok(())
     }
 
-    pub fn enroll(ctx: Context<Enroll>, paid_in: u16, uri: String) -> Result<()> {
+    pub fn enroll(ctx: Context<Enroll>, paid_in: u16) -> Result<()> {
         // init enrollment information
         let fund_data = &ctx.accounts.fund_data;
         let enrollment = &mut ctx.accounts.enrollment;
@@ -118,11 +118,12 @@ pub struct SeedFund<'info> {
 pub struct Enroll<'info> {
     #[account(mut)]
     pub subscriber:  Signer<'info>,
+    /// CHECK: Only using it to reference the enrollment
     pub fund_data: AccountInfo<'info>,
     #[account(
         init,
         payer = subscriber,
-        space = 8 + 32 + 1, 
+        space = 8 + 32 + 64+ 1, 
         seeds = [b"enrollment", subscriber.key().as_ref()], bump
     )]
     pub enrollment: Account<'info, Enrollment>,

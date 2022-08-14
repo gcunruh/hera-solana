@@ -1,8 +1,9 @@
 import * as anchor from "@project-serum/anchor";
 import * as spl from '@solana/spl-token';
 import { Program } from "@project-serum/anchor";
-import { PublicKey } from "@solana/web3.js";
-import { getAssociatedTokenAddress } from "@solana/spl-token";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
+import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
+import { createAssociatedTokenAccount, getAssociatedTokenAddress } from "@solana/spl-token";
 import { HeraSolana } from "../target/types/hera_solana";
 
 describe("hera-solana", async () => {
@@ -12,6 +13,7 @@ describe("hera-solana", async () => {
   const program = anchor.workspace.HeraSolana as Program<HeraSolana>;
   const programId = program.programId;
   const HERA_USDC_MINT = new PublicKey("5kU3fkzBcmpirSbjDY99QqQ3Zq8ABks1JMzZxAVx16Da");
+  let subscriberTokenAccount: anchor.web3.PublicKey;
 
   const idx = new anchor.BN(parseInt((Date.now() / 1000).toString()));
   const idxBuffer = idx.toBuffer('le', 8);
@@ -46,6 +48,37 @@ describe("hera-solana", async () => {
     spl.ASSOCIATED_TOKEN_PROGRAM_ID
   )
 
+  const subscriber = new anchor.web3.Keypair();
+
+  before('prep accounts', async () => {
+    subscriberTokenAccount = await createAssociatedTokenAccount(
+      provider.connection,
+      (provider.wallet as NodeWallet).payer,
+      HERA_USDC_MINT,
+      subscriber.publicKey
+    );
+
+    const fundSubscriber = new anchor.web3.Transaction();
+    fundSubscriber.add(
+      SystemProgram.transfer({
+        fromPubkey: provider.wallet.publicKey,
+        toPubkey: subscriber.publicKey,
+        lamports: 0.5 * anchor.web3.LAMPORTS_PER_SOL,
+      })
+    );
+
+    const txFundTokenAccount = new anchor.web3.Transaction();
+    txFundTokenAccount.add(spl.createTransferInstruction(
+      tokenAta,
+      subscriberTokenAccount,
+      provider.wallet.publicKey,
+      11
+    ));
+
+    const fundSubscriberSig = await provider.sendAndConfirm(fundSubscriber, []);
+    const txFundTokenSig = await provider.sendAndConfirm(txFundTokenAccount, []);
+  })
+
   it("Initialize Fund", async () => {
     console.log("Init-ing new fund");
     let tx = new anchor.web3.Transaction();
@@ -78,7 +111,7 @@ describe("hera-solana", async () => {
     let tx2 = new anchor.web3.Transaction();
 
     const args = {
-      amount: 1
+      amount: 10
     }
 
     tx2.add(
@@ -94,5 +127,39 @@ describe("hera-solana", async () => {
     await provider.sendAndConfirm(tx2);
     console.log("Success!", tx2);
   });
+
+  it("Enroll", async () => {
+    console.log("Enrolling user in fund");
+
+    const enrollmentSeeds = [
+      Buffer.from("enrollment"),
+      subscriber.publicKey.toBuffer()
+    ]
+
+    const [enrollmentPda, enrollmentBump] = await anchor.web3.PublicKey
+        .findProgramAddress(
+            enrollmentSeeds,
+            programId,
+    );
+
+    let tx3 = new anchor.web3.Transaction();
+
+    const args = {
+      paid_in: 1
+    }
+
+    tx3.add(
+      await program.methods.enroll(args.paid_in).accounts({
+        subscriber: subscriber.publicKey,
+        fundData: fundDataPda,
+        enrollment: enrollmentPda,
+        fund: fundPda,
+        fromAccount: subscriberTokenAccount
+      }).instruction()
+    )
+
+    await provider.sendAndConfirm(tx3, [subscriber])
+    console.log("Success!", tx3);
+  })
 
 });
