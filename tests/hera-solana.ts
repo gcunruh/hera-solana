@@ -1,8 +1,8 @@
 import * as anchor from "@project-serum/anchor";
-import { v4 as uuidv4, parse as uuidParse } from 'uuid';
-import uuidBuffer from "uuid-buffer";
+import * as spl from '@solana/spl-token';
 import { Program } from "@project-serum/anchor";
 import { PublicKey } from "@solana/web3.js";
+import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { HeraSolana } from "../target/types/hera_solana";
 
 describe("hera-solana", async () => {
@@ -38,6 +38,14 @@ describe("hera-solana", async () => {
           programId,
       );
 
+  const tokenAta = await getAssociatedTokenAddress(
+    HERA_USDC_MINT,
+    provider.wallet.publicKey,
+    true,
+    spl.TOKEN_PROGRAM_ID,
+    spl.ASSOCIATED_TOKEN_PROGRAM_ID
+  )
+
   it("Initialize Fund", async () => {
     console.log("Init-ing new fund");
     let tx = new anchor.web3.Transaction();
@@ -63,6 +71,28 @@ describe("hera-solana", async () => {
 
     await provider.sendAndConfirm(tx);
     console.log("Success!", tx);
+  });
+
+  it("Seed Fund", async () => {
+    console.log("Seeding fund");
+    let tx2 = new anchor.web3.Transaction();
+
+    const args = {
+      amount: 1
+    }
+
+    tx2.add(
+      await program.methods
+        .seedFund(args.amount)
+        .accounts({
+          sender: provider.wallet.publicKey,
+          fund: fundPda,
+          fromAccount: tokenAta
+        }).instruction()
+    )
+
+    await provider.sendAndConfirm(tx2);
+    console.log("Success!", tx2);
   });
 
 });

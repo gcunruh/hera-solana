@@ -5,6 +5,7 @@
     },
     "dependencies": {
         "@project-serum/anchor": "^0.25.0",
+        "@solana/spl-token": "^0.3.0",
         "uuid": "^8.3.2",
         "uuid-buffer": "^1.0.3"
     },
