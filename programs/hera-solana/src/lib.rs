@@ -33,6 +33,30 @@ pub mod hera_solana {
 
         Ok(())
     }
+
+    pub fn enroll(ctx: Context<Enroll>, paid_in: u16, uri: String) -> Result<()> {
+        // init enrollment information
+        let fund_data = &ctx.accounts.fund_data;
+        let enrollment = &mut ctx.accounts.enrollment;
+        enrollment.paid_in = paid_in.into();
+        enrollment.fund =  fund_data.key();
+        enrollment.bump = *ctx.bumps.get("enrollment").unwrap();
+
+        // transfer paid_in
+            token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                token::Transfer {
+                    from: ctx.accounts.from_account.to_account_info(),
+                    to: ctx.accounts.fund.to_account_info(),
+                    authority: ctx.accounts.subscriber.to_account_info(),
+                },
+            ),
+            paid_in.into()
+        )?;
+
+        Ok(())
+    }
 }
 
 #[account]
@@ -41,6 +65,13 @@ pub struct FundData {
     fy_premium: f32,
     fy_allowable: f32,
     year: u16
+}
+
+#[account]
+pub struct Enrollment {
+    fund: Pubkey,
+    paid_in: u64,
+    bump: u8
 }
 
 #[derive(Accounts)]
@@ -81,4 +112,25 @@ pub struct SeedFund<'info> {
     pub from_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct Enroll<'info> {
+    #[account(mut)]
+    pub subscriber:  Signer<'info>,
+    pub fund_data: AccountInfo<'info>,
+    #[account(
+        init,
+        payer = subscriber,
+        space = 8 + 32 + 1, 
+        seeds = [b"enrollment", subscriber.key().as_ref()], bump
+    )]
+    pub enrollment: Account<'info, Enrollment>,
+    #[account(mut)]
+    pub fund: Account<'info, TokenAccount>,
+    #[account(mut, constraint = from_account.owner == subscriber.key())]
+    pub from_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+
 }
