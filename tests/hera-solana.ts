@@ -194,7 +194,7 @@ describe("hera-solana", async () => {
 
     const args = {
       claimIdx: claimIdx,
-      amount: 1
+      amount: new anchor.BN(1)
     }
 
     tx4.add(
