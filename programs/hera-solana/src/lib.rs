@@ -18,7 +18,7 @@ pub mod hera_solana {
         Ok(())
     }
 
-    pub fn seed_fund(ctx: Context<SeedFund>, amount: u16) -> Result<()> {
+    pub fn seed_fund(ctx: Context<SeedFund>, amount: u64) -> Result<()> {
         token::transfer(
             CpiContext::new(
                 ctx.accounts.token_program.to_account_info(),
@@ -28,13 +28,13 @@ pub mod hera_solana {
                     authority: ctx.accounts.sender.to_account_info(),
                 },
             ),
-            amount.into()
+            amount
         )?;
 
         Ok(())
     }
 
-    pub fn enroll(ctx: Context<Enroll>, paid_in: u16) -> Result<()> {
+    pub fn enroll(ctx: Context<Enroll>, paid_in: u64) -> Result<()> {
         // init enrollment information
         let fund_data = &ctx.accounts.fund_data;
         let enrollment = &mut ctx.accounts.enrollment;
@@ -53,13 +53,13 @@ pub mod hera_solana {
                     authority: ctx.accounts.subscriber.to_account_info(),
                 },
             ),
-            paid_in.into()
+            paid_in
         )?;
 
         Ok(())
     }
 
-    pub fn make_claim(ctx: Context<MakeClaim>, idx: u64, claim_amount: u16) -> Result<()> {
+    pub fn make_claim(ctx: Context<MakeClaim>, idx: u64, claim_amount: u64) -> Result<()> {
         let enrollment = &ctx.accounts.enrollment;
         assert_eq!(
             enrollment.subscriber.key(),

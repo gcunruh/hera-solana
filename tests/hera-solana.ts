@@ -119,7 +119,7 @@ describe("hera-solana", async () => {
 
     tx2.add(
       await program.methods
-        .seedFund(args.amount)
+        .seedFund(new anchor.BN(args.amount))
         .accounts({
           sender: provider.wallet.publicKey,
           fund: fundPda,
@@ -152,7 +152,7 @@ describe("hera-solana", async () => {
     }
 
     tx3.add(
-      await program.methods.enroll(args.paid_in).accounts({
+      await program.methods.enroll(new anchor.BN(args.paid_in)).accounts({
         subscriber: subscriber.publicKey,
         fundData: fundDataPda,
         enrollment: enrollmentPda,
